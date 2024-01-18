@@ -55,7 +55,6 @@
 import PIL
 import sys
 import os
-import numpy
 import re
 class TableGenerator():
     def __init__(
@@ -78,9 +77,10 @@ class TableGenerator():
         if type(content_object) == str:
             if cell_indicator is not None:
                 # cell indicator can be a range or one cell ["A1:C3", "C5", "Z2", "A", "2"] -> range, single cell, column only, row only
-                cell_indicator_validation = self._cell_indicator_validation(cell_indicator)
-                if not cell_indicator_validation:
-                    raise ValueError("Invaid cell indicator.")
+                validation = self._cell_indicator(cell_indicator)
+                match validation[0]:
+                    case "range":
+                        pass
             else:
                 print("Target cell must be provided to insert content.")
                 sys.exit(1)
@@ -94,59 +94,7 @@ class TableGenerator():
     def add_content_cell(self, content, cell_address):
         self.table[cell_address[0]][cell_address[1]][0][0] = content
         return self.table
-    
-    def _cell_indicator_validation(self, cell_indicator_object):
-        if type(cell_indicator_object) == list:
-            for cell_indicator in cell_indicator_object:
-                print(cell_indicator)
-                if type(cell_indicator) != str:
-                    return False
-                if ":" in cell_indicator:
-                    try:
-                        cell_range = self._cell_range_to_list(cell_indicator)
-                    except ValueError:
-                        return False
-                    if not self._size_range_validation(cell_range):
-                        return False
-                elif cell_indicator.isalpha():
-                    temp_name = cell_indicator + "1"
-                    cell_tuple = self._cell_name_to_tuple(temp_name)
-                    column_number = cell_tuple[0]
-                    if column_number > self.size[0]:
-                        return False
-                elif cell_indicator.isdigit(): # row number
-                    if int(cell_indicator) > self.size[0]:
-                        return False
-                else:
-                    cell_tuple = self._cell_name_to_tuple(cell_indicator)
-                    if not (cell_tuple[0] <= self.size[0] and cell_tuple[1] <= self.size[1]):
-                        return False
-            return True
-        elif type(cell_indicator_object) == str:
-            if ":" in cell_indicator_object:
-                try:
-                    cell_range = self._cell_range_to_list(cell_indicator_object)
-                except ValueError:
-                    return False
-                if not self._size_range_validation(cell_range):
-                    return False
-            elif cell_indicator_object.isalpha():
-                temp_name = cell_indicator_object + "1"
-                cell_tuple = self._cell_name_to_tuple(temp_name)
-                column_number = cell_tuple[0]
-                if column_number > self.size[0]:
-                    return False
-            elif cell_indicator_object.isdigit(): # row number
-                if int(cell_indicator_object) > self.size[0]:
-                    return False
-            else:
-                cell_tuple = self._cell_name_to_tuple(cell_indicator_object)
-                if not (cell_tuple[0] <= self.size[0] and cell_tuple[1] <= self.size[1]):
-                    return False
-            return True
-        else:
-            raise ValueError("Invalid cell indicator.")
-
+ 
     def _generate_plane_table_object(self):
         table = []
         row_number = self.size[0]
@@ -223,7 +171,7 @@ class TableGenerator():
             return True
         
     def _merge_cell(self, merge_request):
-        merge_area = self._cell_range_to_list(merge_request)
+        merge_area = self._cell_indicator(merge_request)[1]
 
         top_left, size = self._find_top_left_and_size(merge_area)
 
@@ -314,8 +262,8 @@ if __name__ == "__main__":
         [(6,7), (8,8)]
     ] # ["A1:A3", "B3:C2"]
     #table2 = tablegen._cell_indicator_validation("A1:A3")
-    table2 = tablegen._merge_validation("A1:A3")
-    print(table2) # ["A1:C3", "C5", "B2", "A", "2"]
+    table2 = tablegen.merge("A1:A3")
+    # print(table2) # ["A1:C3", "C5", "B2", "A", "2"]
     #table2 = tablegen._cell_indicator("C")
     #print(table2)
     print('\n'.join(map(str, tablegen.table)))
