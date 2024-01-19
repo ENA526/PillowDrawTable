@@ -62,39 +62,232 @@ class TableGenerator():
             size,
             content_table=[],
             merge_request=[],
-            general_font="arial",
-            general_style="normal",
-            general_color="black",
-            general_rotation=0,
-            general_opacity=100,
-            general_table_outer_margin=[],
-            general_cell_inner_margin=[]):
+            fontStyle="arial",
+            textStyle="normal",
+            color="black",
+            rotation="0",
+            opacity="100",
+            table_outer_margin_top="0",
+            table_outer_margin_bottom="0",
+            table_outer_margin_left="0",
+            table_outer_margin_right="0",
+            cell_inner_margin_top="0",
+            cell_inner_margin_bottom="0",
+            cell_inner_margin_left="0",
+            cell_inner_margin_right="0",):
         self.size = size
         self.merge_info = []
         self.table = self._generate_plane_table_object()
+        self.merge(merge_request)
+        if type(content_table) == str:
+            self.add_content(content_table, "all")
+        elif type(content_table) == list and content_table != []:
+            self.add_content(content_table)
+        elif content_table == []:
+            self.add_content("", "all")
+        else:
+            print("Invalid content infomration.")
+            raise ValueError("Invalid content information.")
+        self.add_fontStyle(fontStyle, "all")
+        self.add_textStyle(textStyle, "all")
+        self.add_color(color, "all")
+        self.add_rotation(rotation, "all")
+        self.add_opacity(opacity, "all")
+        self.add_table_outer_margin_top(table_outer_margin_top, "all")
+        self.add_table_outer_margin_bottom(table_outer_margin_bottom, "all")
+        self.add_table_outer_margin_left(table_outer_margin_left, "all")
+        self.add_table_outer_margin_right(table_outer_margin_right, "all")
+        self.add_cell_inner_margin_top(cell_inner_margin_top, "all")
+        self.add_cell_inner_margin_bottom(cell_inner_margin_bottom, "all")
+        self.add_cell_inner_margin_left(cell_inner_margin_left, "all")
+        self.add_cell_inner_margin_right(cell_inner_margin_right, "all")
+
+
+
+    def add_content(self, content_object, cell_indicator_object=None):
+        self._add_data("content", content_object, cell_indicator_object)
+
+    def add_fontStyle(self, content_object, cell_indicator_object=None):
+        self._add_data("fontStyle", content_object, cell_indicator_object)
     
-    def add_content(self, content_object, cell_indicator=None):
-        if type(content_object) == str:
-            if cell_indicator is not None:
+    def add_textStyle(self, content_object, cell_indicator_object=None):
+        self._add_data("textStyle", content_object, cell_indicator_object)
+    
+    def add_color(self, content_object, cell_indicator_object=None):
+        self._add_data("color", content_object, cell_indicator_object)
+    
+    def add_rotation(self, content_object, cell_indicator_object=None):
+        self._add_data("rotation", content_object, cell_indicator_object)
+    
+    def add_opacity(self, content_object, cell_indicator_object=None):
+        self._add_data("opacity", content_object, cell_indicator_object)
+
+    def add_table_outer_margin_top(self, content_object, cell_indicator_object=None):
+        self._add_data("table_outer_margin_top", content_object, cell_indicator_object)
+
+    def add_table_outer_margin_bottom(self, content_object, cell_indicator_object=None):
+        self._add_data("table_outer_margin_bottom", content_object, cell_indicator_object)
+
+    def add_table_outer_margin_left(self, content_object, cell_indicator_object=None):
+        self._add_data("table_outer_margin_left", content_object, cell_indicator_object)
+
+    def add_table_outer_margin_right(self, content_object, cell_indicator_object=None):
+        self._add_data("table_outer_margin_right", content_object, cell_indicator_object)
+
+    def add_cell_inner_margin_top(self, content_object, cell_indicator_object=None):
+        self._add_data("cell_inner_margin_top", content_object, cell_indicator_object)
+
+    def add_cell_inner_margin_bottom(self, content_object, cell_indicator_object=None):
+        self._add_data("cell_inner_margin_bottom", content_object, cell_indicator_object)
+
+    def add_cell_inner_margin_left(self, content_object, cell_indicator_object=None):
+        self._add_data("cell_inner_margin_left", content_object, cell_indicator_object)
+
+    def add_cell_inner_margin_right(self, content_object, cell_indicator_object=None):
+        self._add_data("cell_inner_margin_right", content_object, cell_indicator_object)
+    
+    def _add_data(self, data_type, data, cell_indicator_object=None):
+        if type(data) == str:
+            if cell_indicator_object is not None:
                 # cell indicator can be a range or one cell ["A1:C3", "C5", "Z2", "A", "2"] -> range, single cell, column only, row only
-                validation = self._cell_indicator(cell_indicator)
-                match validation[0]:
-                    case "range":
-                        pass
+                if type(cell_indicator_object) != list and cell_indicator_object != "all":
+                    tmp_list = []
+                    tmp_list.append(cell_indicator_object)
+                    cell_indicator_object = tmp_list
+                    for indicator in cell_indicator_object:
+                        validation = self._cell_indicator(indicator)
+                        if validation == "notValid":
+                            return f"Cell indicator {indicator} is not valid."
+                        
+                if cell_indicator_object == "all":
+                    for i in range(self.size[0]):
+                        for k in range(self.size[1]):
+                            target_cell = self.table[i][k]
+                            if target_cell[1][0] < 1 or target_cell[1][1] < 1:
+                                print(f"cell {(i,k)} is merged and controlled by cell {((i+target_cell[1][0],k+target_cell[1][1]))}")
+                                continue
+                            self._type_distributor(data, target_cell, data_type)
+
+                for cell_indicator in cell_indicator_object:
+                    validation = self._cell_indicator(cell_indicator)
+                    match validation[0]:
+                        case "range":
+                            top_left, size = self._find_top_left_and_size(validation[1])
+                            for i in range(size[0]):
+                                for k in range(size[1]):
+                                    target_cell = self.table[top_left[0]+i][top_left[1]+k]
+                                    if target_cell[1][0] < 1 or target_cell[1][1] < 1:
+                                        print(f"cell {(top_left[0]+i,top_left[1]+k)} is merged and controlled by cell {((top_left[0]+i+target_cell[1][0],top_left[1]+k+target_cell[1][1]))}")
+                                        continue
+                                    self._type_distributor(data, target_cell, data_type)
+                        case "cell":
+                            target_cell = self.table[validation[1][0]][validation[1][1]]
+                            if target_cell[1][0] < 1 or target_cell[1][1] < 1:
+                                print(f"cell {(validation[1][0],validation[1][1])} is merged and controlled by cell {((validation[1][0]+target_cell[1][0],validation[1][1]+target_cell[1][1]))}")
+                                continue
+                            self._type_distributor(data, target_cell, data_type)
+                        case "column":
+                            for row_number in range(self.size[0]):
+                                target_cell = self.table[row_number][validation[1]]
+                                if target_cell[1][0] < 1 or target_cell[1][1] < 1:
+                                    print(f"cell {(row_number,validation[1])} is merged and controlled by cell {((row_number+target_cell[1][0],validation[1]+target_cell[1][1]))}")
+                                    continue
+                                self._type_distributor(data, target_cell, data_type)
+                        case "row":
+                            for column_number in range(self.size[1]):
+                                target_cell = self.table[validation[1]][column_number]
+                                if target_cell[1][0] < 1 or target_cell[1][1] < 1:
+                                    print(f"cell {(validation[1],column_number)} is merged and controlled by cell {((validation[1]+target_cell[1][0],column_number+target_cell[1][1]))}")
+                                    continue
+                                self._type_distributor(data, target_cell, data_type)
             else:
                 print("Target cell must be provided to insert content.")
                 sys.exit(1)
             
-        elif type(content_object) == list:
-            pass
+        elif type(data) == list:
+            # [
+            # [], <- empty row
+            # "string", <- fill entire row
+            # ["string", "string"] <- no lists are allowed in row list
+            # ]
+            print("For data that exceeds the table boundary will be truncated.")
+
+            if not isinstance(data, list):
+                print("Invalid content information.")
+                return
+            for element in data:
+                # Check if each element is either a string or a list
+                if not isinstance(element, (list, str)):
+                    print("Invalid content information.")
+                    return
+                # If the element is a list, check its elements
+                if isinstance(element, list):
+                    # Ensure each item in the nested list is a string
+                    if not all(isinstance(item, str) for item in element):
+                        print("Invalid content information.")
+                        return
+                    # Check for deeper nesting
+                    for item in element:
+                        if isinstance(item, list):
+                            print("Invalid content information.")
+                            return
+                        
+            for row_number, row in enumerate(data):
+                if row == []:
+                    continue
+                if type(row) == str:
+                    for column_number in range(self.size[1]):
+                        try:
+                            target_cell = self.table[row_number][column_number]
+                        except IndexError:
+                            continue
+                        if target_cell[1][0] < 1 or target_cell[1][1] < 1:
+                            continue
+                        self._type_distributor(row, target_cell, data_type)
+                elif type(row) == list:
+                    for column_number, element in enumerate(row):
+                        try:
+                            target_cell = self.table[row_number][column_number]
+                        except IndexError:
+                            continue
+                        if target_cell[1][0] < 1 or target_cell[1][1] < 1:
+                            continue
+                        self._type_distributor(element, target_cell, data_type)
         else:
             print("Invalid content information.")
-            sys.exit(1)
+            return
 
-    def add_content_cell(self, content, cell_address):
-        self.table[cell_address[0]][cell_address[1]][0][0] = content
-        return self.table
- 
+    def _type_distributor(self, data, target_cell, type):
+        match type:
+            case "content":
+                target_cell[0][0] = data
+            case "fontStyle":
+                target_cell[0][1] = data
+            case "textStyle":
+                target_cell[0][2] = data
+            case "color":
+                target_cell[0][3] = data
+            case "rotation":
+                target_cell[0][4] = data
+            case "opacity":
+                target_cell[0][5] = data
+            case "table_outer_margin_top":
+                target_cell[2][0] = data
+            case "table_outer_margin_bottom":
+                target_cell[2][1] = data
+            case "table_outer_margin_left":
+                target_cell[2][2] = data
+            case "table_outer_margin_right":
+                target_cell[2][3] = data
+            case "cell_inner_margin_top":
+                target_cell[3][0] = data
+            case "cell_inner_margin_bottom":
+                target_cell[3][1] = data
+            case "cell_inner_margin_left":
+                target_cell[3][2] = data
+            case "cell_inner_margin_right":
+                target_cell[3][3] = data
+              
     def _generate_plane_table_object(self):
         table = []
         row_number = self.size[0]
@@ -103,10 +296,10 @@ class TableGenerator():
             row = []
             for _ in range(column_number):
                 cell = [
-                    ["", ""], # Content Information
+                    ["", "", "", "", "", ""], # Content Information
                     (1, 1),
-                    [],
-                    []
+                    ["", "", "", ""],
+                    ["", "", "", ""]
                 ]
                 row.append(cell)
             table.append(row)
@@ -180,7 +373,8 @@ class TableGenerator():
                 if i == 0 and k == 0:
                     self.table[top_left[0]][top_left[1]][1] = size
                 else:
-                    self.table[top_left[0]+i][top_left[1]+k][1] = (0, 0)
+                    self.table[top_left[0]+i][top_left[1]+k][1] = (-i, -k)
+                    # set all other attributes to default null
         self.merge_info.append(merge_area)
         
     def _find_top_left_and_size(self, point):
@@ -219,7 +413,7 @@ class TableGenerator():
         elif cell_indicator.isdigit(): # row number
             if int(cell_indicator) > self.size[0]:
                 return "notValid"
-            return "row", int(cell_indicator)
+            return "row", int(cell_indicator) - 1
         else:
             cell_tuple = self._cell_name_to_tuple(cell_indicator)
             if not (cell_tuple[0] <= self.size[0] and cell_tuple[1] <= self.size[1]):
@@ -241,9 +435,9 @@ class TableGenerator():
     def _cell_name_to_tuple(self, cell_name):
         match = re.match(r"([a-zA-Z]+)([0-9]+)", cell_name)
         if match:
-            row = self._column_name_to_number(match.group(1))
-            column = int(match.group(2))
-            return (column, row)
+            column = self._column_name_to_number(match.group(1))
+            row = int(match.group(2)) - 1
+            return (row, column)
         else:
             raise ValueError("Invalid cell name format.")
 
@@ -251,20 +445,23 @@ class TableGenerator():
         base = ord('A') - 1  # ASCII value of 'A' minus 1
         result = 0
         for char in alpha_string:
-            result = result * 26 + (ord(char) - base)
-        return result    
+            result = result * 26 + (ord(char) - base) - 1
+        return result
 
 if __name__ == "__main__":
-    tablegen = TableGenerator((8,8))
+    tablegen = TableGenerator((2,3), "12", [])
     tablegen.merge_info = [
         [(2,3), (2,4)],
         [(4,5), (1,2)],
         [(6,7), (8,8)]
     ] # ["A1:A3", "B3:C2"]
     #table2 = tablegen._cell_indicator_validation("A1:A3")
-    table2 = tablegen.merge("A1:A3")
+    # table2 = tablegen.add_content("ff", "2")
+    #table2 =tablegen.add_content("ff", "A")
+    #table2 =tablegen.add_fontStyle("ff", "all")
     # print(table2) # ["A1:C3", "C5", "B2", "A", "2"]
     #table2 = tablegen._cell_indicator("C")
     #print(table2)
     print('\n'.join(map(str, tablegen.table)))
+    
     
